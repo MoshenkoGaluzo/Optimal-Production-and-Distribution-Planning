@@ -14,6 +14,9 @@ A = makeDict([indexI, indexJ], A)
 B = makeDict([indexI], B)
 C = makeDict([indexJ], C)
 
+
+model_Drinks = LpProblem("Drinks", LpMaximize)
+
 X = []
 #print(X[0][0][0])
 
@@ -26,6 +29,17 @@ for i in range(0,4):
     for j in range(0,6):
         X[i].append([])
         for k in range(0,3):
-            X[i][j].append(LpVariable(f"{Drink[i]} in {City[j]} from {Factory[k]}"))
+            X[i][j].append(LpVariable(f"{Drink[i]} in {City[j]} from {Factory[k]}", 0, None))
+            #X[i][j].append(f"{Drink[i]} in {City[j]} from {Factory[k]}")
 
-print(X[0][0][0])
+#print(X[0][0][0])
+
+#Profit function
+#price/l - cost/l - transport/l
+model_Drinks += (lpSum([(var*(dp.price_df.iloc[j, i] - dp.cost_df.iloc[k, i] - dp.transport_df.iloc[k, j])) for i,drinks in enumerate(X) for j,cities in enumerate(drinks) for k,var in enumerate(cities)])), "Profit Function"
+
+
+#Constraints for Maximum Demand
+for i,drinks in enumerate(Drink):
+    for j,cities in enumerate(City):
+        model_Drinks += lpSum(X[i][j]) <= dp.demand_df.loc[cities, drinks], f"Demand for {Drink[i]} in {City[j]}"

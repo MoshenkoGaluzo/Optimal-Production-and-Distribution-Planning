@@ -10,7 +10,7 @@ data = {
     "Natural Juice": [10000, 12000, 10000],
     "Flavored Mineral Water": [8000, 10000, 9000]
 }
-capacity_df = pd.DataFrame(data)
+capacity_df = pd.DataFrame(data).set_index("Factory")
 
 #production cost
 data = {
@@ -20,7 +20,7 @@ data = {
     "Natural Juice": [1.20, 1.15, 1.30],
     "Flavored Mineral Water": [1.10, 1.05, 1.20]
 }
-cost_df = pd.DataFrame(data)
+cost_df = pd.DataFrame(data).set_index("Factory")
 
 #selling prices (€ per liter)
 data = {
@@ -30,7 +30,7 @@ data = {
     "Natural Juice": [2.10, 2.00, 2.05, 2.20, 2.15, 2.00],
     "Flavored Mineral Water": [2.00, 1.95, 1.98, 2.10, 2.05, 1.90]
 }
-price_df = pd.DataFrame(data)
+price_df = pd.DataFrame(data).set_index("Market")
 
 #maximum demand (l per month)
 data = {
@@ -40,11 +40,11 @@ data = {
     "Natural Juice": [5000, 6000, 4500, 7000, 6000, 4000],
     "Flavored Mineral Water": [4000, 5000, 4000, 6000, 5000, 3500]
 }
-demand_df = pd.DataFrame(data)
+demand_df = pd.DataFrame(data).set_index("Market")
 
 #transport cost (€ per liter)
 data = {
-    "From → To": ["Portugal", "Spain", "France"],
+    "From-To": ["Portugal", "Spain", "France"],
     "Lisbon": [0.10, 0.20, 0.35],
     "Madrid": [0.20, 0.10, 0.30],
     "Barcelona": [0.25, 0.15, 0.25],
@@ -52,9 +52,10 @@ data = {
     "Marseille": [0.45, 0.30, 0.08],
     "Porto": [0.05, 0.25, 0.40]
 }
-transport_df = pd.DataFrame(data)
+transport_df = pd.DataFrame(data).set_index("From-To")
 
 #Budgets (€)
 total_production_budget = 120000
 total_transport_budget = 40000
 
+#print(demand_df)
