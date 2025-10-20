@@ -42,12 +42,43 @@ model_Drinks += (lpSum([var*dp.transport_df.iloc[k,j] for i,drink in enumerate(X
 #print("\n".join([str(X[0][i][0]) for i in range(len(Cities))]))
 
 
-model_Drinks.solve()
+def solve_without():
+    model_Drinks.solve()
 
-# 2. CHECK STATUS  
-print("Status:", LpStatus[model_Drinks.status])
+    # 2. CHECK STATUS  
+    print("Status:", LpStatus[model_Drinks.status])
 
-# 3. GET RESULTS
-print("Optimal value =", value(model_Drinks.objective))
-for variable in model_Drinks.variables():
-    print(f"{variable.name} = {variable.varValue}") 
+    # 3. GET RESULTS
+    print("Optimal value =", value(model_Drinks.objective))
+    for variable in model_Drinks.variables():
+        print(f"{variable.name} = {variable.varValue}")
+
+
+#solve_without()
+
+#Additional constraint:
+#Idea: a <= 0.5*(a+b)  is equi to 0.5*a - 0.5*b<=0
+def solve_with():
+
+    for k, factory in enumerate(Factories):
+        for i, drink in enumerate(Drinks):
+            #[0.5*var if drink in var.name else -0.5*var for var in X[][][]]
+            lpSum([0.5*X[i][j][k] if drink in X[i][j][k].name else -0.5*X[i][j][k] for i in range(len(Drinks)) for j in range(len(Cities))]) <= 0, "extra constraint"
+
+    
+    model_Drinks.solve()
+
+    # 2. CHECK STATUS  
+    print("Status:", LpStatus[model_Drinks.status])
+
+    # 3. GET RESULTS
+    print("Optimal value =", value(model_Drinks.objective))
+    for variable in model_Drinks.variables():
+        print(f"{variable.name} = {variable.varValue}")
+
+
+
+solve_with()
+
+
+#print("\n".join([str(X[i][j][0]) for i in range(len(Drinks)) for j in range(len(Cities))]))
