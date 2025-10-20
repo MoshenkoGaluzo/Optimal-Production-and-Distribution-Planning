@@ -20,26 +20,51 @@ model_Drinks = LpProblem("Drinks", LpMaximize)
 X = []
 #print(X[0][0][0])
 
-Drink = ["Iced Tea", "Sparkling Water", "Natural Juice","Flavored Mineral Water"]
-City = ["Lisbon", "Madrid", "Barcelona", "Paris", "Marseille", "Porto"]
-Factory = ["Portugal", "Spain", "France"]
+Drinks = ["Iced Tea", "Sparkling Water", "Natural Juice","Flavored Mineral Water"]
+Cities = ["Lisbon", "Madrid", "Barcelona", "Paris", "Marseille", "Porto"]
+Factories = ["Portugal", "Spain", "France"]
 
 for i in range(0,4):
     X.append([])
     for j in range(0,6):
         X[i].append([])
         for k in range(0,3):
-            X[i][j].append(LpVariable(f"{Drink[i]} in {City[j]} from {Factory[k]}", 0, None))
+            X[i][j].append(LpVariable(f"{Drinks[i]} in {Cities[j]} from {Factories[k]}", 0, None))
             #X[i][j].append(f"{Drink[i]} in {City[j]} from {Factory[k]}")
 
 #print(X[0][0][0])
 
 #Profit function
 #price/l - cost/l - transport/l
-model_Drinks += (lpSum([(var*(dp.price_df.iloc[j, i] - dp.cost_df.iloc[k, i] - dp.transport_df.iloc[k, j])) for i,drinks in enumerate(X) for j,cities in enumerate(drinks) for k,var in enumerate(cities)])), "Profit Function"
+model_Drinks += (lpSum([(var*(dp.price_df.iloc[j, i] - dp.cost_df.iloc[k, i] - dp.transport_df.iloc[k, j])) for i,drink in enumerate(X) for j,city in enumerate(drink) for k,var in enumerate(city)])), "Profit Function"
 
 
 #Constraints for Maximum Demand
-for i,drinks in enumerate(Drink):
-    for j,cities in enumerate(City):
-        model_Drinks += lpSum(X[i][j]) <= dp.demand_df.loc[cities, drinks], f"Demand for {Drink[i]} in {City[j]}"
+for i,drink in enumerate(Drinks):
+    for j,city in enumerate(Cities):
+        model_Drinks += lpSum(X[i][j]) <= dp.demand_df.loc[city, drink], f"Demand for {Drinks[i]} in {Cities[j]}"
+
+#Constrains for Maximum Production
+for i,drink in enumerate(Drinks):
+    for k, factory in enumerate(Factories):
+        model_Drinks += lpSum(
+            [X[i][city][k] for city in range(len(Cities))]
+            ) <= dp.capacity_df.loc[factory, drink], f"Prof. Cap. for {Drinks[i]} in {Factories[k]}"
+        pass
+
+#Production Cost Constraint
+model_Drinks += (lpSum([var*dp.cost_df.iloc[k,i] for i,drink in enumerate(X) for j,city in enumerate(drink) for k,var in enumerate(city)])) <= dp.total_production_budget, "Production Budget Constraint"
+#Transport Cost Constraint
+model_Drinks += (lpSum([var*dp.transport_df.iloc[k,j] for i,drink in enumerate(X) for j,city in enumerate(drink) for k,var in enumerate(city)])) <= dp.total_transport_budget, "Transport Budget Constraint"
+#print("\n".join([str(X[0][i][0]) for i in range(len(Cities))]))
+
+
+model_Drinks.solve()
+
+# 2. CHECK STATUS  
+print("Status:", LpStatus[model_Drinks.status])
+
+# 3. GET RESULTS
+print("Optimal value =", value(model_Drinks.objective))
+for variable in model_Drinks.variables():
+    print(f"{variable.name} = {variable.varValue}") 
