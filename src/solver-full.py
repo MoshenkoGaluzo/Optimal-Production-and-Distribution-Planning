@@ -14,7 +14,7 @@ columns = [f"var_{i}" for i in range(72)]
 
 variables = pd.DataFrame(columns=["Coeff", "Optimal Value"])
 matrix = pd.DataFrame(columns=columns, dtype=float)
-RHS = pd.DataFrame()
+RHS = pd.DataFrame(columns=["Slack", "Value"])
 cnst_number = 0
 
 
@@ -36,6 +36,7 @@ for i,drink in enumerate(Drinks):
     for j,city in enumerate(Cities):
         model_Drinks += lpSum(X[i][j]) <= data.demand_df.loc[city, drink], f"Demand for {Drinks[i]} in {Cities[j]}"
         matrix.loc[cnst_number] = [0]*(i*18 + j*3) + [1]*3 + [0]*(69 - i*18 - j*3)
+        RHS.loc[cnst_number] = [0, data.demand_df.loc[city, drink]]
         cnst_number += 1
         
 
@@ -46,16 +47,19 @@ for i,drink in enumerate(Drinks):
             [X[i][city][k] for city in range(len(Cities))]
             ) <= data.capacity_df.loc[factory, drink], f"Prod. Cap. for {Drinks[i]} in {Factories[k]}"
         matrix.loc[cnst_number] = [0]*(18*i) + ([0]*(k) + [1] + [0]*(2-k))*6 + [0]*(54-18*i)
+        RHS.loc[cnst_number] = [0, data.capacity_df.loc[factory, drink]]
         cnst_number += 1
         pass
 
 #Production Cost Constraint
 model_Drinks += (lpSum([var*data.cost_df.iloc[k,i] for i,drink in enumerate(X) for j,city in enumerate(drink) for k,var in enumerate(city)])) <= data.total_production_budget, "Production Budget Constraint"
 matrix.loc[cnst_number] = [data.cost_df.iloc[k,i] for i in range(len(Drinks)) for j in range(len(Cities)) for k in range(len(Factories))]
+RHS.loc[cnst_number] = [0, data.total_production_budget]
 cnst_number += 1
 #Transport Cost Constraint
 model_Drinks += (lpSum([var*data.transport_df.iloc[k,j] for i,drink in enumerate(X) for j,city in enumerate(drink) for k,var in enumerate(city)])) <= data.total_transport_budget, "Transport Budget Constraint"
 matrix.loc[cnst_number] = [data.transport_df.iloc[k,j] for i in range(len(Drinks)) for j in range(len(Cities)) for k in range(len(Factories))]
+RHS.loc[cnst_number] = [0, data.total_transport_budget]
 cnst_number += 1
 #print("\n".join([str(X[0][i][0]) for i in range(len(Cities))]))
 
@@ -65,9 +69,16 @@ for k, factory in enumerate(Factories):
         #[0.5*var if drink in var.name else -0.5*var for var in X[][][]]
         model_Drinks += (lpSum([0.5*X[i][j][k] if drink in X[i][j][k].name else -0.5*X[i][j][k] for i in range(len(Drinks)) for j in range(len(Cities))])) <= 0, f"check {drink} in {factory}"
         matrix.loc[cnst_number] = [0]*(18*i) + ([-0.5]*(k) + [0.5] + [-0.5]*(2-k))*6 +[0]*(54-18*i)
+        RHS.loc[cnst_number] = [0, 0]
         cnst_number += 1
 
+
+
+
+
 model_Drinks.solve()
+
+
 
 solution_dict = {v.name: v.varValue for v in model_Drinks.variables()}
 
@@ -75,82 +86,9 @@ if hasattr(model_Drinks.objective, 'items'):
     for var, coeff in model_Drinks.objective.items():
         variables.loc[var.name] = [coeff, solution_dict[var.name]]
 
+
+RHS["Slack"] = [constraint.slack for name, constraint in model_Drinks.constraints.items()]
+
 variables.to_csv("Profit_Function.csv", index=True, index_label='Variable_Name')
 matrix.to_csv("Matrix.csv", index=False, header=False)
-
-
-
-
-
-
-
-
-def solve_without():
-    model_Drinks.solve()
-
-    # 2. CHECK STATUS  
-    print("Status:", LpStatus[model_Drinks.status])
-
-    # 3. GET RESULTS
-    print("Optimal value =", value(model_Drinks.objective))
-    for variable in model_Drinks.variables():
-        print(f"{variable.name} = {variable.varValue}")
-
-
-#solve_without()
-
-#Additional constraint:
-#Idea: a <= 0.5*(a+b)  is equi to 0.5*a - 0.5*b<=0
-def solve_with():
-    pass
-
-    
-model_Drinks.solve()
-if hasattr(model_Drinks.objective, 'items'):
-    print("\nCoefficients:")
-    for var, coeff in model_Drinks.objective.items():
-        print(f"  {var.name}: {coeff}")
-
-
-    # 2. CHECK STATUS  
-    #print("Status:", LpStatus[model_Drinks.status])
-
-    # 3. GET RESULTS
-print("Optimal value =", value(model_Drinks.objective))
-for variable in model_Drinks.variables():
-    print(f"{variable.name} = {variable.varValue}")
-
-
-
-#solve_with()
-#model_Drinks.solve()
-print("=== CONSTRAINT INFORMATION ===")
-for name, constraint in model_Drinks.constraints.items():
-    slack = constraint.slack
-    shadow_price = constraint.pi  # Dual value
-    print(f"{name}: {constraint}")
-    print(f"  Slack = {slack}")
-    print(f"  Shadow Price = {shadow_price}")
-#print("\n".join([str(X[i][j][0]) for i in range(len(Drinks)) for j in range(len(Cities))]))
-
-print("number constraints: " + str(len(model_Drinks.constraints)))
-print("number vars: " + str(len(model_Drinks.variables())))
-
-
-
-
-print("Full objective:", model_Drinks.objective)
-print("Objective name:", model_Drinks.objective.name)
-print("Objective value:", value(model_Drinks.objective))  # After solving
-
-# Get coefficients (if linear expression)
-if hasattr(model_Drinks.objective, 'items'):
-    print("\nCoefficients:")
-    for var, coeff in model_Drinks.objective.items():
-        print(f"  {var.name}: {coeff}")
-
-
-
-
-print("\n")
-print(variables.head())
+RHS.to_csv("RHS.csv", index=False)
