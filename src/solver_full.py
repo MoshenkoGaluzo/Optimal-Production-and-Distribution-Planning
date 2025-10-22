@@ -67,8 +67,10 @@ cnst_number += 1
 for k, factory in enumerate(Factories):
     for i, drink in enumerate(Drinks):
         #[0.5*var if drink in var.name else -0.5*var for var in X[][][]]
-        model_Drinks += (lpSum([0.5*X[i][j][k] if drink in X[i][j][k].name else -0.5*X[i][j][k] for i in range(len(Drinks)) for j in range(len(Cities))])) <= 0, f"check {drink} in {factory}"
-        matrix.loc[cnst_number] = [0]*(18*i) + ([-0.5]*(k) + [0.5] + [-0.5]*(2-k))*6 +[0]*(54-18*i)
+        model_Drinks += (lpSum([0.5*X[o][j][k] if drink.replace(" ", "_") in X[o][j][k].name else -0.5*X[o][j][k] for o in range(len(Drinks)) for j in range(len(Cities))])) <= 0, f"check {drink} in {factory}"
+        #matrix.loc[cnst_number] = [0]*(18*i) + ([-0.5]*(k) + [0.5] + [-0.5]*(2-k))*6 +[0]*(54-18*i)
+        matrix.loc[cnst_number] = ([0]*(k)+[-0.5]+[0]*(2-k))*6*i  +    ([0]*(k)+[0.5]+[0]*(2-k))*6    +   ([0]*(k)+[-0.5]+[0]*(2-k))*6*(3-i)
+        #print(len(([0]*(k)+[-0.5]+[0]*(2-k))*6*i  +    ([0]*(k)+[0.5]+[0]*(2-k))*6    +   ([0]*(k)+[-0.5]+[0]*(2-k))*6*(3-i)))
         RHS.loc[cnst_number] = [0, 0]
         cnst_number += 1
 
@@ -84,11 +86,17 @@ solution_dict = {v.name: v.varValue for v in model_Drinks.variables()}
 
 if hasattr(model_Drinks.objective, 'items'):
     for var, coeff in model_Drinks.objective.items():
-        variables.loc[var.name] = [coeff, solution_dict[var.name]]
+        variables.loc[var.name] = [round(coeff,2), solution_dict[var.name]]
 
 
 RHS["Slack"] = [constraint.slack for name, constraint in model_Drinks.constraints.items()]
 
-variables.to_csv("Profit_Function.csv", index=True, index_label='Variable_Name')
-matrix.to_csv("Matrix.csv", index=False, header=False)
-RHS.to_csv("RHS.csv", index=False)
+variables.to_csv("csv_files/full/Profit_Function.csv", index=True, index_label='Variable_Name')
+matrix.to_csv("csv_files/full/Matrix.csv", index=False, header=False)
+RHS.to_csv("csv_files/full/RHS.csv", index=False)
+
+print("Objective =", value(model_Drinks.objective))
+
+print("\n")
+print(X[0][0][0].name)
+print( Drinks[0].replace(" ","_") in X[0][0][0].name)
