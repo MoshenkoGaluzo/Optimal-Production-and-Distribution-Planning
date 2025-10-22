@@ -96,7 +96,3 @@ matrix.to_csv("csv_files/full/Matrix.csv", index=False, header=False)
 RHS.to_csv("csv_files/full/RHS.csv", index=False)
 
 print("Objective =", value(model_Drinks.objective))
-
-print("\n")
-print(X[0][0][0].name)
-print( Drinks[0].replace(" ","_") in X[0][0][0].name)
